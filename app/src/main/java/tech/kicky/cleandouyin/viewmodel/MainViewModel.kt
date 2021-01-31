@@ -1,9 +1,12 @@
 package tech.kicky.cleandouyin.viewmodel
 
+import android.app.Application
+import android.content.ContentValues
 import android.os.Environment
+import android.provider.MediaStore
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,7 +25,7 @@ import java.io.*
  * author: yidong
  * 2021/1/29
  */
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val videoPrefix = "https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids="
     private val _video = MutableLiveData<DVideo>()
@@ -36,6 +39,9 @@ class MainViewModel : ViewModel() {
 
     private val _showDownload = MutableLiveData(false)
     val showDownload: LiveData<Boolean> = _showDownload
+
+    private val _downloadSuccessfully = MutableLiveData(false)
+    val downloadSuccessfully: LiveData<Boolean> = _downloadSuccessfully
 
     fun parseVideoUrl(clipUrl: String) {
         viewModelScope.launch {
@@ -115,6 +121,7 @@ class MainViewModel : ViewModel() {
 
     private fun downloadVideo(body: ResponseBody, title: String) {
         val inStream: InputStream = body.byteStream()
+        var fs: FileOutputStream? = null
         var byteRead: Int
         try {
             //封装一个保存文件的路径对象
@@ -129,17 +136,30 @@ class MainViewModel : ViewModel() {
                 fileSavePath.delete()
             }
             //写入文件
-            val fs = FileOutputStream(fileSavePath)
+            fs = FileOutputStream(fileSavePath)
             val buffer = ByteArray(1024)
             while (inStream.read(buffer).also { byteRead = it } != -1) {
                 fs.write(buffer, 0, byteRead)
             }
-            inStream.close()
-            fs.close()
+            insertVideo(fileSavePath)
         } catch (e: FileNotFoundException) {
             e.printStackTrace()
         } catch (e: IOException) {
             e.printStackTrace()
+        } finally {
+            inStream.close()
+            fs?.close()
         }
+    }
+
+    private fun insertVideo(videoFile: File) {
+        val values = ContentValues(3)
+        values.put(MediaStore.Video.Media.TITLE, videoFile.name)
+        values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+        values.put(MediaStore.Video.Media.DATA, videoFile.absolutePath)
+        getApplication<Application>().contentResolver.insert(
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            values
+        )
     }
 }
