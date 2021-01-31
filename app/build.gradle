@@ -15,6 +15,11 @@ android {
         versionName "1.0"
     }
 
+    //此处添加你要过滤的文件
+    packagingOptions {
+        exclude 'META-INF/library_release.kotlin_module'
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -51,5 +56,6 @@ dependencies {
     implementation 'io.coil-kt:coil:1.1.1'
     implementation 'cn.jzvd:jiaozivideoplayer:7.6.0'
     implementation 'com.github.ybq:Android-SpinKit:1.4.0'
-
+    implementation 'com.zackratos.ultimatebarx:ultimatebarx:0.4.2'
+    implementation 'com.permissionx.guolindev:permissionx:1.4.0'
 }

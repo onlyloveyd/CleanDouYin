@@ -1,18 +1,25 @@
 package tech.kicky.cleandouyin
 
+import android.Manifest
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.*
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import cn.jzvd.Jzvd
 import coil.load
+import com.permissionx.guolindev.PermissionX
+import com.zackratos.ultimatebarx.library.UltimateBarX
+import com.zackratos.ultimatebarx.library.bean.BarConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -53,7 +60,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(mBinding.root)
-
+        applyStatusBar()
+        checkPermission()
         mainViewModel.video.observe(this, {
             mBinding.video.setUp(it.url, it.title)
             mBinding.video.posterImageView.scaleType = ImageView.ScaleType.FIT_CENTER
@@ -121,5 +129,35 @@ class MainActivity : AppCompatActivity() {
 
     fun doClear(view: View) {
         mBinding.etUrl.setText("")
+    }
+
+    private fun applyStatusBar() {
+        val config = BarConfig.newInstance()
+            .fitWindow(false)
+            .color(Color.TRANSPARENT)
+            .light(false)
+
+        UltimateBarX.with(this)
+            .config(config)
+            .applyStatusBar()
+    }
+
+    private fun checkPermission() {
+        PermissionX.init(this)
+            .permissions(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            .onExplainRequestReason { scope, deniedList ->
+                scope.showRequestReasonDialog(deniedList, "保存视频需要存储权限", "确定", "取消")
+            }
+            .onForwardToSettings { scope, deniedList ->
+                scope.showForwardToSettingsDialog(deniedList, "请前往设置界面手动打开存储权限", "确定", "取消")
+            }
+            .request { allGranted, grantedList, deniedList ->
+                if (allGranted) {
+                    Toast.makeText(this, "All permissions are granted", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "未授权: $deniedList", Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }
     }
 }
