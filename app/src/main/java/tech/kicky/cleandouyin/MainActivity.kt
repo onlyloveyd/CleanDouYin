@@ -17,9 +17,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import cn.jzvd.Jzvd
 import coil.load
+import com.gyf.immersionbar.ImmersionBar
+import com.gyf.immersionbar.ktx.immersionBar
 import com.permissionx.guolindev.PermissionX
-import com.zackratos.ultimatebarx.library.UltimateBarX
-import com.zackratos.ultimatebarx.library.bean.BarConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -132,14 +132,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyStatusBar() {
-        val config = BarConfig.newInstance()
-            .fitWindow(false)
-            .color(Color.TRANSPARENT)
-            .light(false)
-
-        UltimateBarX.with(this)
-            .config(config)
-            .applyStatusBar()
+        immersionBar {
+            statusBarColor(R.color.black)
+            transparentNavigationBar()
+        }
     }
 
     private fun checkPermission() {
@@ -151,9 +147,9 @@ class MainActivity : AppCompatActivity() {
             .onForwardToSettings { scope, deniedList ->
                 scope.showForwardToSettingsDialog(deniedList, "请前往设置界面手动打开存储权限", "确定", "取消")
             }
-            .request { allGranted, grantedList, deniedList ->
+            .request { allGranted, _, deniedList ->
                 if (allGranted) {
-                    Toast.makeText(this, "All permissions are granted", Toast.LENGTH_LONG).show()
+//                    Toast.makeText(this, "All permissions are granted", Toast.LENGTH_LONG).show()
                 } else {
                     Toast.makeText(this, "未授权: $deniedList", Toast.LENGTH_LONG).show()
                     finish()

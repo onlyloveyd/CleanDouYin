@@ -56,6 +56,8 @@ dependencies {
     implementation 'io.coil-kt:coil:1.1.1'
     implementation 'cn.jzvd:jiaozivideoplayer:7.6.0'
     implementation 'com.github.ybq:Android-SpinKit:1.4.0'
-    implementation 'com.zackratos.ultimatebarx:ultimatebarx:0.4.2'
+    implementation 'com.gyf.immersionbar:immersionbar:3.0.0'
+    // kotlin扩展（可选）
+    implementation 'com.gyf.immersionbar:immersionbar-ktx:3.0.0'
     implementation 'com.permissionx.guolindev:permissionx:1.4.0'
 }
