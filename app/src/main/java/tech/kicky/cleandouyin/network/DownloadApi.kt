@@ -1,8 +1,8 @@
 package tech.kicky.cleandouyin.network
 
-import okhttp3.Response
 import okhttp3.ResponseBody
-import retrofit2.http.*
+import retrofit2.http.GET
+import retrofit2.http.Url
 
 /**
  * Download API

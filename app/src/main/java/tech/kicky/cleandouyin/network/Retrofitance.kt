@@ -14,7 +14,7 @@ import tech.kicky.cleandouyin.BuildConfig
 object Retrofitance {
     private const val BASE_URL = "http://fultter.club:8000/";
 
-    val client: OkHttpClient by lazy {
+    private val client: OkHttpClient by lazy {
         val loggingInterceptor = HttpLoggingInterceptor()
         if (BuildConfig.DEBUG) {
             loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
