@@ -1,7 +1,10 @@
 package tech.kicky.cleandouyin.viewmodel
 
 import android.app.Application
+import android.content.ContentResolver
 import android.content.ContentValues
+import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
@@ -48,8 +51,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _loading.value = true
             _showDownload.value = false
             withContext(Dispatchers.IO) {
-                val videoUrl = parseVideoUrlFromClipBoard(clipUrl)
                 try {
+                    val videoUrl = parseVideoUrlFromClipBoard(clipUrl)
                     val con = Jsoup.connect(videoUrl)
                     con.header(
                         "User-Agent",
@@ -120,44 +123,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun downloadVideo(body: ResponseBody, title: String) {
-        val inStream: InputStream = body.byteStream()
-        var fs: FileOutputStream? = null
-        var byteRead: Int
-        try {
-            //封装一个保存文件的路径对象
-            val fileSavePath = File(
-                Environment.getExternalStorageDirectory().absolutePath.toString() + "/douyin/" + title + ".mp4"
-            )
-            val fileParent = fileSavePath.parentFile
-            if (!fileParent?.exists()!!) {
-                fileParent.mkdirs()
+        val resolver = getApplication<Application>().contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Video.Media.TITLE, title)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/DouYin")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
-            if (fileSavePath.exists()) { //如果文件存在，则删除原来的文件
-                fileSavePath.delete()
-            }
-            //写入文件
-            fs = FileOutputStream(fileSavePath)
-            val buffer = ByteArray(1024)
-            while (inStream.read(buffer).also { byteRead = it } != -1) {
-                fs.write(buffer, 0, byteRead)
-            }
-            insertVideo(fileSavePath)
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            inStream.close()
-            fs?.close()
         }
+
+        val uri = resolver.insert(
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            values
+        )
+
+        uri?.let { contentUri ->
+            val cr: ContentResolver = getApplication<Application>().contentResolver
+            val fd = cr.openFileDescriptor(contentUri, "w")
+
+            val outStream = FileOutputStream(fd?.fileDescriptor) //写
+            val inStream: InputStream = body.byteStream()
+
+            var byteRead: Int
+            try {
+                val buffer = ByteArray(1024)
+                while (inStream.read(buffer).also { byteRead = it } != -1) {
+                    outStream.write(buffer, 0, byteRead)
+                }
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            } finally {
+                inStream.close()
+                outStream.close()
+            }
+
+            values.clear()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.put(MediaStore.Audio.Media.IS_PENDING, 0)
+            }
+            resolver.update(uri, values, null, null)
+        }
+
     }
 
-    private fun insertVideo(videoFile: File) {
-        val values = ContentValues(3)
-        values.put(MediaStore.Video.Media.TITLE, videoFile.name)
-        values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-        values.put(MediaStore.Video.Media.DATA, videoFile.absolutePath)
-        getApplication<Application>().contentResolver.insert(
+    private fun insertVideo(title: String): Uri? {
+        val values = ContentValues().apply {
+            put(MediaStore.Video.Media.TITLE, title)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { //this one
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/DouYin")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+
+        return getApplication<Application>().contentResolver.insert(
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
             values
         )

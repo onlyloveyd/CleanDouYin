@@ -135,6 +135,7 @@ class MainActivity : AppCompatActivity() {
         immersionBar {
             statusBarColor(R.color.black)
             transparentNavigationBar()
+            fullScreen(false)
         }
     }
 
