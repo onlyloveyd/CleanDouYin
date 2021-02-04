@@ -1,11 +1,11 @@
 package tech.kicky.cleandouyin.viewmodel
 
 import android.app.Application
-import android.content.ContentResolver
 import android.content.ContentValues
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -20,7 +20,10 @@ import org.jsoup.Connection
 import org.jsoup.Jsoup
 import tech.kicky.cleandouyin.data.DVideo
 import tech.kicky.cleandouyin.network.Retrofitance
-import java.io.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 
 
 /**
@@ -42,9 +45,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showDownload = MutableLiveData(false)
     val showDownload: LiveData<Boolean> = _showDownload
-
-    private val _downloadSuccessfully = MutableLiveData(false)
-    val downloadSuccessfully: LiveData<Boolean> = _downloadSuccessfully
 
     fun parseVideoUrl(clipUrl: String) {
         viewModelScope.launch {
@@ -109,11 +109,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _video.value?.let {
                     try {
                         val response = Retrofitance.downloadApi.download(it.url)
-                        downloadVideo(response, it.title)
-                        _toast.postValue("视频保存成功")
+                        if (downloadVideo(response, it.title)) {
+                            _toast.postValue("视频保存成功")
+                        } else {
+                            _toast.postValue("视频保存失败")
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        _toast.postValue("视频下载失败")
+                        _toast.postValue("视频保存失败")
                     } finally {
                         _loading.postValue(false)
                     }
@@ -122,66 +125,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun downloadVideo(body: ResponseBody, title: String) {
-        val resolver = getApplication<Application>().contentResolver
-        val values = ContentValues().apply {
-            put(MediaStore.Video.Media.TITLE, title)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/DouYin")
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-        }
-
-        val uri = resolver.insert(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            values
-        )
-
-        uri?.let { contentUri ->
-            val cr: ContentResolver = getApplication<Application>().contentResolver
-            val fd = cr.openFileDescriptor(contentUri, "w")
-
-            val outStream = FileOutputStream(fd?.fileDescriptor) //写
-            val inStream: InputStream = body.byteStream()
-
-            var byteRead: Int
-            try {
-                val buffer = ByteArray(1024)
-                while (inStream.read(buffer).also { byteRead = it } != -1) {
-                    outStream.write(buffer, 0, byteRead)
+    private fun getUriFromName(videoName: String): Uri? {
+        val contentResolver = getApplication<Application>().contentResolver
+        val uri: Uri?
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Video.Media.TITLE, "$videoName.mp4")
+                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(
+                        MediaStore.MediaColumns.RELATIVE_PATH,
+                        Environment.DIRECTORY_MOVIES + "/DouYin"
+                    )
+//                    put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
-            } catch (e: FileNotFoundException) {
-                e.printStackTrace()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            } finally {
-                inStream.close()
-                outStream.close()
             }
 
-            values.clear()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                values.put(MediaStore.Audio.Media.IS_PENDING, 0)
+            uri = contentResolver.insert(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                values
+            )
+        } else {
+            val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+            if (!path.exists()) {
+                path.mkdirs()
             }
-            resolver.update(uri, values, null, null)
+            val pathStr = path.absolutePath + "/DouYin"
+            val file = File(pathStr)
+            if (!file.exists()) {
+                file.mkdirs()
+            }
+            val videoPath = pathStr + File.separator + videoName + ".mp4"
+            val values = ContentValues()
+            values.put(MediaStore.Video.Media.DISPLAY_NAME, videoName)
+            values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            values.put(MediaStore.Video.Media.DATA, videoPath)
+            values.put(MediaStore.Video.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
+            uri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
         }
-
+        return uri
     }
 
-    private fun insertVideo(title: String): Uri? {
-        val values = ContentValues().apply {
-            put(MediaStore.Video.Media.TITLE, title)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { //this one
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/DouYin")
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
+    private fun downloadVideo(body: ResponseBody, title: String): Boolean {
+        val contentResolver = getApplication<Application>().contentResolver
+        val uri = getUriFromName(title)
+        uri?.let { localUri ->
+            val fileDescriptor: ParcelFileDescriptor? =
+                contentResolver.openFileDescriptor(localUri, "w")
+            val inStream: InputStream = body.byteStream()
+            val outStream = FileOutputStream(fileDescriptor?.fileDescriptor)
+            outStream.use { outPut ->
+                var read: Int
+                val buffer = ByteArray(2048)
+                while (inStream.read(buffer).also { read = it } != -1) {
+                    outPut.write(buffer, 0, read)
+                }
             }
+            return true
         }
-
-        return getApplication<Application>().contentResolver.insert(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            values
-        )
+        return false
     }
 }

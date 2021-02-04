@@ -3,6 +3,7 @@ package tech.kicky.cleandouyin
 import android.Manifest
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -19,6 +20,7 @@ import cn.jzvd.Jzvd
 import coil.load
 import com.gyf.immersionbar.ImmersionBar
 import com.gyf.immersionbar.ktx.immersionBar
+import com.gyf.immersionbar.ktx.setFitsSystemWindows
 import com.permissionx.guolindev.PermissionX
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -61,7 +63,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(mBinding.root)
         applyStatusBar()
-        checkPermission()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            checkPermission()
+        }
         mainViewModel.video.observe(this, {
             mBinding.video.setUp(it.url, it.title)
             mBinding.video.posterImageView.scaleType = ImageView.ScaleType.FIT_CENTER
@@ -133,6 +137,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyStatusBar() {
         immersionBar {
+            setFitsSystemWindows()
             statusBarColor(R.color.black)
             transparentNavigationBar()
             fullScreen(false)
@@ -150,7 +155,6 @@ class MainActivity : AppCompatActivity() {
             }
             .request { allGranted, _, deniedList ->
                 if (allGranted) {
-//                    Toast.makeText(this, "All permissions are granted", Toast.LENGTH_LONG).show()
                 } else {
                     Toast.makeText(this, "未授权: $deniedList", Toast.LENGTH_LONG).show()
                     finish()
