@@ -85,9 +85,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _video.postValue(dVideo)
                     _loading.postValue(false)
                     _showDownload.postValue(true)
-                } catch (exception: IOException) {
+                } catch (exception: Exception) {
                     exception.printStackTrace()
                     _loading.postValue(false)
+                    _toast.postValue("请输入正确的抖音视频地址")
                 }
             }
         }
