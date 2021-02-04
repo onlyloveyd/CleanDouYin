@@ -2,7 +2,6 @@ package tech.kicky.cleandouyin
 
 import android.Manifest
 import android.content.Context
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
@@ -18,7 +17,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import cn.jzvd.Jzvd
 import coil.load
-import com.gyf.immersionbar.ImmersionBar
 import com.gyf.immersionbar.ktx.immersionBar
 import com.gyf.immersionbar.ktx.setFitsSystemWindows
 import com.permissionx.guolindev.PermissionX
@@ -140,6 +138,7 @@ class MainActivity : AppCompatActivity() {
             setFitsSystemWindows()
             statusBarColor(R.color.black)
             transparentNavigationBar()
+            navigationBarColor(R.color.black)
             fullScreen(false)
         }
     }
