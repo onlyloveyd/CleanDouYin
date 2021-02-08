@@ -133,15 +133,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val values = ContentValues().apply {
                 put(MediaStore.Video.Media.TITLE, "$videoName.mp4")
                 put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(
-                        MediaStore.MediaColumns.RELATIVE_PATH,
-                        Environment.DIRECTORY_MOVIES + "/DouYin"
-                    )
-//                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-                }
+                put(
+                    MediaStore.MediaColumns.RELATIVE_PATH,
+                    Environment.DIRECTORY_MOVIES + "/DouYin"
+                )
             }
-
             uri = contentResolver.insert(
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                 values
@@ -157,11 +153,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 file.mkdirs()
             }
             val videoPath = pathStr + File.separator + videoName + ".mp4"
-            val values = ContentValues()
-            values.put(MediaStore.Video.Media.DISPLAY_NAME, videoName)
-            values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            values.put(MediaStore.Video.Media.DATA, videoPath)
-            values.put(MediaStore.Video.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
+            val values = ContentValues().apply {
+                put(MediaStore.Video.Media.DISPLAY_NAME, videoName)
+                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                put(MediaStore.Video.Media.DATA, videoPath)
+                put(MediaStore.Video.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
+            }
             uri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
         }
         return uri
