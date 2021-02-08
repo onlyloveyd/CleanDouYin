@@ -175,14 +175,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 contentResolver.openFileDescriptor(localUri, "w")
             val inStream: InputStream = body.byteStream()
             val outStream = FileOutputStream(fileDescriptor?.fileDescriptor)
-            outStream.use { outPut ->
-                var read: Int
-                val buffer = ByteArray(2048)
-                while (inStream.read(buffer).also { read = it } != -1) {
-                    outPut.write(buffer, 0, read)
+            try {
+                outStream.use { outPut ->
+                    var read: Int
+                    val buffer = ByteArray(2048)
+                    while (inStream.read(buffer).also { read = it } != -1) {
+                        outPut.write(buffer, 0, read)
+                    }
                 }
+                return true
+            } catch (e: IOException) {
+                e.printStackTrace()
+            } finally {
+                inStream.close()
+                outStream.close()
             }
-            return true
+            return false
         }
         return false
     }
